@@ -6,6 +6,9 @@ sys.path.insert(0,'../Primarios')
 import scipy.special as spc
 from Ocentauri import interp
 import scipy.integrate as integrate
+from numpy.polynomial.polynomial import polyval
+
+background = np.loadtxt('back_events.txt',usecols=(1),unpack=True)
 
 def EdNdE_primary(mass,energy,col):
     #val1,val2 = interp(mass,col)
@@ -31,8 +34,22 @@ def E2dNdE_pulsar(pars,energy):
     #Gamma = 10.**log_g
     energy_cut = 10.**log_E
     No = 10.**log_N
+
     #for the flux we have to multipy No by energy**2
     return No*(energy**(-1.0*Gamma))*np.exp((-1.0)*energy/energy_cut)
+
+
+def pulsar_p_source(pars,energy):
+    log_Nn,alpha = pars
+
+    #alpha = 1.69943
+    #mu,sigma = [1.69943,0.13128]
+    Nn = 10.**log_Nn
+
+    #for the flux we have to multipy No by energy**2
+    val_2 = Nn*(energy**(-1.0*alpha))
+
+    return val_2
 
 def no_events_model_primary(pars,e_min,e_max,species,exposure,psf_energy):
 
@@ -43,6 +60,7 @@ def no_events_model_primary(pars,e_min,e_max,species,exposure,psf_energy):
     for i in range(len(e_min)):
         n_events[i]=integrate.quad(integrand,e_min[i]/1000.,e_max[i]/1000.)[0]*exposure[i]*psf_energy[i]
     return n_events
+
 
 #No_events pulsar
 def no_events_model_pulsar(pars,e_min,e_max):
@@ -55,11 +73,29 @@ def no_events_model_pulsar(pars,e_min,e_max):
         n_events[i]=integrate.quad(integrand,e_min[i],e_max[i])[0]
     return n_events
 
+def no_events_pulsar_complete(pars,e_min,e_max):
+
+
+    integrand = lambda x:E2dNdE_pulsar(pars[:3],x)
+    n_events=np.zeros(len(e_min))
+
+    for i in range(len(e_min)):
+        n_events[i]=integrate.quad(integrand,e_min[i],e_max[i])[0]
+
+    inte_n = lambda x:pulsar_p_source(pars[3:],x)
+    events_n=np.zeros(len(e_min))
+
+    for i in range(len(e_min)):
+        events_n[i]=integrate.quad(inte_n,e_min[i],e_max[i])[0]
+
+    return n_events + events_n + background
+
 class Events(object):
     def __init__(self, e_min,e_max, model):
         self.model = model
         self.E_min = e_min
         self.E_max = e_max
+
 
     def __call__(self,pars,*params):
         if self.model == 'primary':
@@ -67,6 +103,9 @@ class Events(object):
             return val
         if self.model == 'pulsar':
             val = no_events_model_pulsar(pars,self.E_min,self.E_max)
+            return val
+        if self.model == 'p+b':
+            val = no_events_pulsar_complete(pars,self.E_min,self.E_max)
             return val
 
 class Flux(object):
@@ -93,6 +132,8 @@ def flux_lnhood(pars,data,err,energy,model,col):
     return -0.5*np.sum(p)
 
 def event_lnhood(pars,data,e_min,e_max,model,col,expo,psf):
+
+    #alpha = np.random.normal(1.69943,0.13128,1)
     ini_fun = Events(e_min,e_max,model)
     H = ini_fun(pars,col,expo,psf)
 
@@ -109,14 +150,36 @@ def priors(pars,plist,model):
         plist[4]<log_J<plist[5]:
             return 0.0
         return -np.inf
-    elif model == 'pulsar':
+    if model == 'pulsar':
         Gamma, log_E,log_N = pars
 
         if plist[0]<Gamma<plist[1] and plist[2]<log_E<plist[3] and\
          plist[4]<log_N<plist[5]:
-            return 0.0
+
+            return -np.inf
+
+    elif model == 'p+b':
+        Gamma,log_E,log_N,log_Nn,alpha = pars
+
+        mu = 1.69943
+        sigma = 0.13128
+
+        log_f = ((alpha - mu)/sigma)**2 + np.log(2.0*np.pi*sigma**2)
+
+        if plist[0]<Gamma<plist[1] and plist[2]<log_E<plist[3] and plist[4]<log_N<plist[5] and\
+           plist[6]<log_Nn<plist[7] and plist[8]<alpha<plist[9]:
+           return -0.5 * log_f
         return -np.inf
 
+        """
+        mu = 1.69943
+        sigma = 0.13128
+
+        log_f = ((alpha - mu)/sigma)**2 + np.log(2.0*np.pi*sigma**2)
+
+
+        return np.log(np.random.normal(mu,sigma))
+        """
 def flux_lnpost(pars,data,err,energy,plist,model,col):
     pi = priors(pars,plist,model)
     if not np.isfinite(pi):
