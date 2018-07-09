@@ -9,6 +9,8 @@ import scipy.integrate as integrate
 from numpy.polynomial.polynomial import polyval
 
 background = np.loadtxt('back_events.txt',usecols=(1),unpack=True)
+Ocen_exp, Ocen_psf = np.loadtxt('O_cen_data.txt',usecols=(4,5),unpack=True)
+Ps_exp, Ps_psf = np.loadtxt('Source_data.txt',usecols=(4,5),unpack=True)
 
 def EdNdE_primary(mass,energy,col):
     #val1,val2 = interp(mass,col)
@@ -27,6 +29,19 @@ def phi_primary(pars,energy,col):
     return energy*(1000.)*(1.602e-6)*var
 
 def E2dNdE_pulsar(pars,energy):
+    Gamma,log_E,log_N = pars
+    #Gamma=0.7
+    #energy_cut=1.2*1000.
+    #No = 1e-11
+    #Gamma = 10.**log_g
+    energy_cut = 10.**log_E
+    No = 10.**log_N
+
+    #for the flux we have to multipy No by energy**2
+    val = No*(energy**(-1.0*Gamma))*np.exp((-1.0)*energy/energy_cut)
+    return val
+
+def E2dNdE_flux(pars,energy):
     Gamma,log_E,log_N = pars
     #Gamma=0.7
     #energy_cut=1.2*1000.
@@ -71,7 +86,7 @@ def no_events_model_pulsar(pars,e_min,e_max):
 
     for i in range(len(e_min)):
         n_events[i]=integrate.quad(integrand,e_min[i],e_max[i])[0]
-    return n_events
+    return n_events * Ocen_exp * Ocen_psf
 
 def no_events_pulsar_complete(pars,e_min,e_max):
 
@@ -88,7 +103,8 @@ def no_events_pulsar_complete(pars,e_min,e_max):
     for i in range(len(e_min)):
         events_n[i]=integrate.quad(inte_n,e_min[i],e_max[i])[0]
 
-    return n_events + events_n + background
+    #return n_events + events_n + background
+    return (n_events * Ocen_exp * Ocen_psf) + (events_n * Ps_exp * Ps_psf) + background
 
 class Events(object):
     def __init__(self, e_min,e_max, model):
@@ -120,7 +136,7 @@ class Flux(object):
             return val
 
         elif self.model == 'pulsar':
-            val = E2dNdE_pulsar(pars,self.energy)
+            val = E2E2dNdE_flux(pars,self.energy)
             return val
 
 def flux_lnhood(pars,data,err,energy,model,col):
@@ -151,12 +167,12 @@ def priors(pars,plist,model):
             return 0.0
         return -np.inf
     if model == 'pulsar':
-        Gamma, log_E,log_N = pars
+        Gamma,log_E,log_N = pars
 
         if plist[0]<Gamma<plist[1] and plist[2]<log_E<plist[3] and\
          plist[4]<log_N<plist[5]:
-
-            return -np.inf
+            return 0.0
+        return -np.inf
 
     elif model == 'p+b':
         Gamma,log_E,log_N,log_Nn,alpha = pars
