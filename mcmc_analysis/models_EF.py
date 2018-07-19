@@ -8,9 +8,21 @@ from Ocentauri import interp
 import scipy.integrate as integrate
 from numpy.polynomial.polynomial import polyval
 
-background = np.loadtxt('back_events.txt',usecols=(1),unpack=True)
+background = np.loadtxt('back_events.txt',usecols=(1),unpack=True) #this is the background for the 5 bins
+#background = np.loadtxt('data/O_cen_data_Bck_no_events.txt',usecols=(1),unpack=True)[:7]
+
+#background = np.loadtxt('data/O_cen_data_Bck_flux_true.txt',usecols=(1),unpack=True)[:7]
+#background_flux = np.loadtxt('data/O_cen_data_Bck_flux.txt',usecols=(1),unpack=True)#non-isotropic
+#background_flux = np.loadtxt('data/O_cen_data_Bck_flux2.txt',usecols=(1),unpack=True)[:7]#isotropic
+#background_flux = np.loadtxt('data/O_cen_data_Bck_flux3.txt',usecols=(1),unpack=True)[:7]#los
+
 Ocen_exp, Ocen_psf = np.loadtxt('O_cen_data.txt',usecols=(4,5),unpack=True)
+#Ocen_exp, Ocen_psf = np.loadtxt('data/O_cen_data_no_events.txt',usecols=(4,5),unpack=True)
+#Ocen_exp, Ocen_psf = Ocen_exp[:7], Ocen_psf[:7]
+
 Ps_exp, Ps_psf = np.loadtxt('Source_data.txt',usecols=(4,5),unpack=True)
+#Ps_exp, Ps_psf = np.loadtxt('data/O_cen_data_no_events_source.txt',usecols=(4,5),unpack=True)
+#Ps_exp, Ps_psf = Ps_exp[:7], Ps_psf[:7]
 
 def EdNdE_primary(mass,energy,col):
     #val1,val2 = interp(mass,col)
@@ -104,7 +116,13 @@ def no_events_pulsar_complete(pars,e_min,e_max):
         events_n[i]=integrate.quad(inte_n,e_min[i],e_max[i])[0]
 
     #return n_events + events_n + background
-    return (n_events * Ocen_exp * Ocen_psf) + (events_n * Ps_exp * Ps_psf) + background
+    #return (n_events * Ocen_exp * Ocen_psf) + (events_n * Ps_exp * Ps_psf) + background
+    return Ocen_exp * Ocen_psf * (n_events + events_n) + background
+
+def flux_complete(pars,energy):
+    Omega_cen_flux = E2dNdE_flux(pars[:3],energy) * energy**2
+    Source_flux = pulsar_p_source(pars[3:],energy) * energy**2
+    return 1.602e-6*(Omega_cen_flux + Source_flux) + background
 
 class Events(object):
     def __init__(self, e_min,e_max, model):
@@ -137,6 +155,9 @@ class Flux(object):
 
         elif self.model == 'pulsar':
             val = E2E2dNdE_flux(pars,self.energy)
+            return val
+        elif self.model == 'p+b':
+            val = flux_complete(pars,self.energy)
             return val
 
 def flux_lnhood(pars,data,err,energy,model,col):
@@ -184,7 +205,7 @@ def priors(pars,plist,model):
 
         if plist[0]<Gamma<plist[1] and plist[2]<log_E<plist[3] and plist[4]<log_N<plist[5] and\
            plist[6]<log_Nn<plist[7] and plist[8]<alpha<plist[9]:
-           return -0.5 * log_f
+           return -0.5*log_f
         return -np.inf
 
         """
