@@ -8,21 +8,49 @@ from Ocentauri import interp
 import scipy.integrate as integrate
 from numpy.polynomial.polynomial import polyval
 
-background = np.loadtxt('back_events.txt',usecols=(1),unpack=True) #this is the background for the 5 bins
+#background = np.loadtxt('back_events.txt',usecols=(1),unpack=True) #this is the background for the 5 bins
 #background = np.loadtxt('data/O_cen_data_Bck_no_events.txt',usecols=(1),unpack=True)[:7]
 
+events, Ocen_exp, Ocen_psf, background = np.loadtxt('data/OC_no_events_9_bins.txt',usecols=(1,4,5,6),unpack=True)#9 bin data
+#events, Ocen_exp, Ocen_psf, background = np.loadtxt('data/OC_no_events_25_bins.txt',usecols=(1,4,5,6),unpack=True)#25 bin data
+"""
+this next backgrounds are for the flux analysis
+"""
 #background = np.loadtxt('data/O_cen_data_Bck_flux_true.txt',usecols=(1),unpack=True)[:7]
 #background_flux = np.loadtxt('data/O_cen_data_Bck_flux.txt',usecols=(1),unpack=True)#non-isotropic
 #background_flux = np.loadtxt('data/O_cen_data_Bck_flux2.txt',usecols=(1),unpack=True)[:7]#isotropic
 #background_flux = np.loadtxt('data/O_cen_data_Bck_flux3.txt',usecols=(1),unpack=True)[:7]#los
 
-Ocen_exp, Ocen_psf = np.loadtxt('O_cen_data.txt',usecols=(4,5),unpack=True)
+#Ocen_exp, Ocen_psf = np.loadtxt('O_cen_data.txt',usecols=(4,5),unpack=True)
 #Ocen_exp, Ocen_psf = np.loadtxt('data/O_cen_data_no_events.txt',usecols=(4,5),unpack=True)
 #Ocen_exp, Ocen_psf = Ocen_exp[:7], Ocen_psf[:7]
 
-Ps_exp, Ps_psf = np.loadtxt('Source_data.txt',usecols=(4,5),unpack=True)
+#Ps_exp, Ps_psf = np.loadtxt('Source_data.txt',usecols=(4,5),unpack=True)
 #Ps_exp, Ps_psf = np.loadtxt('data/O_cen_data_no_events_source.txt',usecols=(4,5),unpack=True)
 #Ps_exp, Ps_psf = Ps_exp[:7], Ps_psf[:7]
+
+Ps_exp, Ps_psf = np.loadtxt('data/source_no_events_9_bins.txt',usecols=(2,3),unpack=True)#9 bin data
+#Ps_exp, Ps_psf = np.loadtxt('data/source_no_events_25_bins.txt',usecols=(2,3),unpack=True)#25 bin data
+
+#mask events == 0.0
+mask = events != 0.0
+Ocen_exp = Ocen_exp[mask]
+Ocen_psf = Ocen_psf[mask]
+background = background[mask]
+Ps_exp = Ps_exp[mask]
+Ps_psf =Ps_psf[mask]
+
+def LogParabola(pars,ener):
+    """
+    Log parabola model where N is a free paramerter and do not integrate
+    over as javier would
+    """
+    alpha_oc,beta,Log_Ep,log_N = pars
+    E_p = 10.**Log_Ep
+    N = 10.**log_N
+
+    val = N*(ener/E_p)**(-alpha_oc - beta*np.log(ener/E_p))
+    return val
 
 def EdNdE_primary(mass,energy,col):
     #val1,val2 = interp(mass,col)
@@ -42,10 +70,7 @@ def phi_primary(pars,energy,col):
 
 def E2dNdE_pulsar(pars,energy):
     Gamma,log_E,log_N = pars
-    #Gamma=0.7
-    #energy_cut=1.2*1000.
-    #No = 1e-11
-    #Gamma = 10.**log_g
+
     energy_cut = 10.**log_E
     No = 10.**log_N
 
@@ -119,6 +144,20 @@ def no_events_pulsar_complete(pars,e_min,e_max):
     #return (n_events * Ocen_exp * Ocen_psf) + (events_n * Ps_exp * Ps_psf) + background
     return Ocen_exp * Ocen_psf * (n_events + events_n) + background
 
+def no_events_logparabola(pars,e_min,e_max):
+
+    integrand_oc = lambda x: LogParabola(pars[:4],x)
+    integrand_ps = lambda x: pulsar_p_source(pars[4:],x)
+
+    n_events_oc = np.zeros(len(e_min))
+    n_events_ps = np.zeros(len(e_min))
+
+    for i in range(len(e_min)):
+        n_events_oc[i] = integrate.quad(integrand_oc,e_min[i],e_max[i])[0]
+        n_events_ps[i] = integrate.quad(integrand_ps,e_min[i],e_max[i])[0]
+
+    return (Ocen_exp * Ocen_psf * n_events_oc) + (Ps_exp * Ps_psf * n_events_ps) + background
+
 def flux_complete(pars,energy):
     Omega_cen_flux = E2dNdE_flux(pars[:3],energy) * energy**2
     Source_flux = pulsar_p_source(pars[3:],energy) * energy**2
@@ -140,6 +179,9 @@ class Events(object):
             return val
         if self.model == 'p+b':
             val = no_events_pulsar_complete(pars,self.E_min,self.E_max)
+            return val
+        if self.model == 'logpar':
+            val = no_events_logparabola(pars,self.E_min,self.E_max)
             return val
 
 class Flux(object):
@@ -195,7 +237,7 @@ def priors(pars,plist,model):
             return 0.0
         return -np.inf
 
-    elif model == 'p+b':
+    if model == 'p+b':
         Gamma,log_E,log_N,log_Nn,alpha = pars
 
         mu = 1.69943
@@ -205,6 +247,19 @@ def priors(pars,plist,model):
 
         if plist[0]<Gamma<plist[1] and plist[2]<log_E<plist[3] and plist[4]<log_N<plist[5] and\
            plist[6]<log_Nn<plist[7] and plist[8]<alpha<plist[9]:
+           return -0.5*log_f
+        return -np.inf
+
+    elif model == 'logpar':
+        alpha_oc,beta,log_Ep,log_N,log_Nn,alpha = pars
+
+        mu = 1.69943
+        sigma = 0.13128
+
+        log_f = ((alpha - mu)/sigma)**2 + np.log(2.0*np.pi*sigma**2)
+
+        if plist[0]<alpha_oc<plist[1] and plist[2]<beta<plist[3] and plist[4]<log_Ep<plist[5] and\
+           plist[6]<log_N<plist[7] and plist[8]<log_Nn<plist[9] and plist[10]<alpha<plist[11]:
            return -0.5*log_f
         return -np.inf
 
