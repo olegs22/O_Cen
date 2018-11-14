@@ -23,11 +23,8 @@ Ps_exp2 = Ps_exp2[mask]
 Ps_psf2 =Ps_psf2[mask]
 
 path = '/Users/Oleg/Downloads/O_Cen-2/Primarios/'
-data_mass = np.loadtxt(path + 'GammaPythia_'+channel_global+'_mass_'+str(mass_global)+'.dat')
+data_events = np.loadtxt('../Primarios/No_events_'+channel_global+'_mass_'+str(mass_global)+'.dat')
 
-def dNdE(energy):
-    interpolation = interp1d(data_mass[0],data_mass[1]/data_mass[0])
-    return interpolation(energy)
 """
 def dNdE(pars,ener,channel):
 
@@ -53,20 +50,11 @@ def new_source_2(pars,energy):
     val = Nn * (energy/E_p)**(-1.0*alpha)
     return val
 
-def no_events_DM(pars,e_min,e_max):
+def no_events_DM(pars):
     log_alphax = pars
     alpha_x = 10.**log_alphax
-    inter = lambda x:dNdE(x)
 
-    no_events = np.zeros(len(e_min))
-
-    for i in range(len(e_min)):
-        if e_min[i] >= mass_global or e_max[i] >= mass_global:
-            no_events[i] = 0.0
-        else:
-            no_events[i] = integrate.quad(inter,e_min[i],e_max[i])[0]
-
-    return (no_events * alpha_x * Ocen_exp)/(8.0 * np.pi * mass_global**2)
+    return (data_events * alpha_x * Ocen_exp)/(8.0 * np.pi * mass_global**2)
 
 def no_events_source1(pars,e_min,e_max):
 
@@ -92,7 +80,7 @@ def no_events_source2(pars,e_min,e_max):
 
 def lnhood1(pars,data,e_min,e_max):
 
-    Ocen_1 = no_events_DM(pars[0],e_min,e_max)
+    Ocen_1 = no_events_DM(pars[0])
     source1 = no_events_source1(pars[1:3],e_min,e_max)
 
     H1 = Ocen_1 + source1 + background
@@ -101,7 +89,7 @@ def lnhood1(pars,data,e_min,e_max):
     return np.sum(p1)
 
 def lnhood2(pars,data,e_min,e_max):
-    Ocen_1 = no_events_DM(pars[0],e_min,e_max)
+    Ocen_1 = no_events_DM(pars[0])
     source2 = no_events_source2(pars[-2:],e_min,e_max)
 
     H2 = Ocen_1 + source2 + background
