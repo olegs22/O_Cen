@@ -117,8 +117,9 @@ def lnhood(pars):
         MSP_mask = MSP[i][mask]
         S1_mask = S1[i][mask] 
         S2_mask = S2[i][mask]
+        back_mask = back[i][mask]
   
-        H1_matrix = MSP_mask + S1_mask + S2_mask+ back[mask]
+        H1_matrix = MSP_mask + S1_mask + S2_mask+ back_mask
         #H2_matrix = MSP_mask + S2_mask + back[mask]
         p1 = np.sum(data_flat - H1_matrix +\
              data_flat*np.log(H1_matrix/data_flat))
