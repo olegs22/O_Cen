@@ -9,16 +9,16 @@ from astropy import units as u
 import scipy.integrate as integrate
 
 
-File_psf_oc_data = h5py.File('../../O_cen_2D/psf_data_oc.h5py','r')
-File_psf_s1_data = h5py.File('../../O_cen_2D/psf_data_source1.h5py','r')
-File_psf_s2_data = h5py.File('../../O_cen_2D/psf_s2_data.h5py','r')
+File_psf_oc_data = h5py.File('../../O_cen_2D/exposure_oc.h5py','r')
+File_psf_s1_data = h5py.File('../../O_cen_2D/exposure_s1.h5py','r')
+File_psf_s2_data = h5py.File('../../O_cen_2D/exposure_s2.h5py','r')
 
-File_data = h5py.File('../../O_cen_2D/measured_data_20p.h5py','r')
-File_fake_data = h5py.File('../../O_cen_2D/fake_data_perfect.h5py','r')
+#File_data = h5py.File('../../O_cen_2D/measured_data_20p.h5py','r')
+File_fake_data = h5py.File('../../O_cen_2D/data_fake_noisy.h5py','r')
 
-File_psf_oc =  h5py.File('../../O_cen_2D/PSF_OC_2D_20p_v2.h5py','r')
-File_psf_s1 = h5py.File('../../O_cen_2D/PSF_S1_2D_20p_v2.h5py','r')
-File_psf_s2 = h5py.File('../../O_cen_2D/PSF_S2_2D_20p_v2.h5py','r')
+File_psf_oc =  h5py.File('../../O_cen_2D/PSF_OC_2D_20p.h5py','r')
+File_psf_s1 = h5py.File('../../O_cen_2D/PSF_S1_2D_20p.h5py','r')
+File_psf_s2 = h5py.File('../../O_cen_2D/PSF_S2_2D_20p.h5py','r')
 
 psf_oc = File_psf_oc['psf/psf_oc'][()]
 psf_s1 = File_psf_s1['psf/psf_s1'][()]
