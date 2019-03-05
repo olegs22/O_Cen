@@ -9,11 +9,11 @@ from astropy import units as u
 import scipy.integrate as integrate
 import emcee
 
-File_psf_oc_data = h5py.File('../../O_cen_2D/psf_data_oc.h5py','r')
-File_psf_s1_data = h5py.File('../../O_cen_2D/psf_data_source1.h5py','r')
-File_psf_s2_data = h5py.File('../../O_cen_2D/psf_s2_data.h5py','r')
+File_psf_oc_data = h5py.File('../../O_cen_2D/exposure_oc.h5py','r')
+File_psf_s1_data = h5py.File('../../O_cen_2D/exposure_s1.h5py','r')
+File_psf_s2_data = h5py.File('../../O_cen_2D/exposure_s2.h5py','r')
 
-File_data = h5py.File('../../O_cen_2D/measured_data.h5py','r')
+File_data = h5py.File('../../O_cen_2D/measured_data_20p.h5py','r')
 
 File_psf_oc =  h5py.File('../../O_cen_2D/PSF_OC_2D.h5py','r')
 File_psf_s1 = h5py.File('../../O_cen_2D/PSF_S1_2D.h5py','r')
@@ -34,6 +34,8 @@ naxis3 = File_data['naxis3/maps'][()]
 binsz = File_data['binsz/maps'][()]*np.pi/180.
 data = File_data['data/maps'][()]
 
+print(naxis3)
+print(np.shape(exposure_oc))
 Backgroundfile = '../../O_cen_2D/omegacen_fermibgmodel.txt'
 energy_back,Isotropic,Diffuse=np.loadtxt(Backgroundfile,usecols=(0,1,2),unpack=True)
 energy_back,Isotropic,Diffuse=energy_back*1000.,Isotropic/1000.,Diffuse/1000.
@@ -108,7 +110,6 @@ def lnhood(pars):
     back = no_events_Background()
 
     p1 = np.zeros(15)
-    p2 = np.zeros(15)
     for i in range(15):
         data_flat = data[i].flatten()
         mask = data_flat != 0.0
@@ -119,9 +120,9 @@ def lnhood(pars):
         S2_mask = S2[i][mask]
         back_mask = back[i][mask]
   
-        H1_matrix = MSP_mask + S1_mask + S2_mask+ back_mask
+        H1_matrix = MSP_mask + S1_mask + S2_mask+ back_mask2
         #H2_matrix = MSP_mask + S2_mask + back[mask]
-        p1 = np.sum(data_flat - H1_matrix +\
+        p1[i] = np.sum(data_flat - H1_matrix +\
              data_flat*np.log(H1_matrix/data_flat))
 
         #p2 = np.sum(data_flat - H2_matrix +\
