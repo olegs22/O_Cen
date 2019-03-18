@@ -14,7 +14,7 @@ events, Ocen_exp, Ocen_psf, background = np.loadtxt(path + 'OC_no_events_15_bins
 
 #Ps_exp1, Ps_psf1 = np.loadtxt('data/source2_J1326.txt',usecols=(2,3),unpack=True)#9 bin data
 #Ps_exp2, Ps_psf2 = np.loadtxt('data/source2_J1328.txt',usecols=(2,3),unpack=True)#9 bin data
-Ps_exp1, Ps_psf1 = np.loadtxt('data/source2_J1326_15_bins_05_v2.txt',usecols=(2,3),unpack=True)#15 bin data
+Ps_exp1, Ps_psf1 = np.loadtxt(path + 'source2_J1326_15_bins_05_v2.txt',usecols=(2,3),unpack=True)#15 bin data
 Ps_exp2, Ps_psf2 = np.loadtxt(path + 'source2_J1328_0.5_degree.txt',usecols=(2,3),unpack=True)#15 bin data
 #Ps_exp2, Ps_psf2 = np.loadtxt('data/source2_J1328_15_bins_05_v2.txt',usecols=(2,3),unpack=True)#15 bin data
 
