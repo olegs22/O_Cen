@@ -7,9 +7,9 @@ path = '../../O_cen_2D/P8R3/'
 events, Ocen_exp, Ocen_psf, background = np.loadtxt(path + 'OC_no_events_15_bins_0.2_degree.txt',usecols=(1,4,5,6),unpack=True)#9 bin data
 Ps_exp2, Ps_psf2 = np.loadtxt(path + 'source2_J1328_0.2_degree.txt',usecols=(2,3),unpack=True)#9 bin data
 #dnde = np.loadtxt('/Users/Oleg/Documents/O_Cen/O_cen_2D/data/qq_tables/qq_pythia_spec.txt')
-dnde = np.loadtxt(path + 'qq_pythia_spec.txt')
+dnde = np.loadtxt('/Users/Oleg/Downloads/qq_pythia_spec.txt')
 
-masses_x = np.arange(5,50+0.1,0.1)
+masses_x = np.arange(5,50+0.01,0.01)
 
 mask = events != 0.0
 Ocen_exp = Ocen_exp[mask]
@@ -26,29 +26,24 @@ def new_source_2(pars,energy):
     val = Nn * (energy/E_p)**(-1.0*alpha)
     return val
 
-def no_events_DM(pars):
+def no_events_DM(pars,e_min,e_max):
     mass_x, log_alphax = pars
     #J = 21.0
     #sigJ = log_alphax + J
     alpha_x = 10.**log_alphax
 
     mass_index = np.searchsorted(masses_x,mass_x)
-    complete_energy = np.linspace(0.1,masses_x[mass_index],len(dnde[mass_index]))
-    dnde_interp = interp1d(complete_energy,dnde[mass_index])
-
-    energy = np.linspace(0.1,masses_x[mass_index],15)
-    e_min = energy
-    e_max = np.append(energy[1:],energy[-1]+np.diff(energy)[0])
-    e_min = e_min[mask]
-    e_max = e_max[mask]
-
+    if mass_index >= len(dnde):
+        mass_index -= 1
+    complete_energy = np.linspace(0.1,masses_x[mass_index-1],len(dnde[mass_index-1]))
+    dnde_interp = interp1d(complete_energy,dnde[mass_index-1])
     no_events = np.zeros(len(e_min))
     
     for i in range(len(e_min)):
-        #if e_min[i]< mass_x <= e_max[i]:
-	#    no_events[i] = integrate.quad(integrand_dm,e_min[i],mass_x)[0]
-        #elif e_min[i]<mass_x and e_max[i]<mass_x:
-        no_events[i] = integrate.quad(dnde_interp,e_min[i],e_max[i])[0]
+        if e_min[i]< mass_x <= e_max[i]:
+	        no_events[i] = integrate.quad(dnde_interp,e_min[i],mass_x)[0]
+        elif e_min[i]<mass_x and e_max[i]<mass_x:
+            no_events[i] = integrate.quad(dnde_interp,e_min[i],e_max[i])[0]
 
     return (no_events * alpha_x * Ocen_exp * Ocen_psf)/(8.0 * np.pi * mass_x**2)
 
