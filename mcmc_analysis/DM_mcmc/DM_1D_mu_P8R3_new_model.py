@@ -3,8 +3,8 @@ import scipy.integrate as integrate
 
 
 path = '/Users/Oleg/Documents/O_Cen/O_cen_2D/P8R3/'
-events, Ocen_exp, Ocen_psf, background = np.loadtxt(path + 'OC_no_events_15_bins_1_degree.txt',usecols=(1,4,5,6),unpack=True)#9 bin data
-Ps_exp2, Ps_psf2 = np.loadtxt(path + 'source2_J1328_1_degree.txt',usecols=(2,3),unpack=True)#9 bin data
+events, Ocen_exp, Ocen_psf, background = np.loadtxt(path + 'OC_no_events_15_bins_0.2_degree.txt',usecols=(1,4,5,6),unpack=True)#9 bin data
+Ps_exp2, Ps_psf2 = np.loadtxt(path + 'source2_J1328_0.2_degree.txt',usecols=(2,3),unpack=True)#9 bin data
 
 mask = events != 0.0
 Ocen_exp = Ocen_exp[mask]
@@ -40,16 +40,16 @@ def dnde(mass_x,energy):
     else:
         return (alpha / (np.pi*mass_x)) * T_1 * T_2
 """
-def dNdE_muon(mx,energy):
-   alpha=1./137.
-   y=energy/mx
-   s=4.*mx*mx
-   m_mu = 107 * 1.0e-3
-   term_1=(1+(1-y)*(1-y))/y
-   term_2=np.log(s*(1-y)/m_mu/m_mu)
-#    if term_1 <0 or term_2<0 :
-#        return 0.
-   return alpha*term_1*term_2/np.pi
+def dnde(mx,energy):
+    alpha=1./137.
+    y=energy/mx
+    s=mx**2.
+    m_mu = 107 * 1.0e-3
+    term_1=(1+(1-y)*(1-y))/y
+    term_2=np.log(s*(1-y)/m_mu/m_mu)
+    if term_1 <0 or term_2<0 :
+        return 0.
+    return alpha*term_1*term_2/np.pi/mx
 
 def new_source_2(pars,energy):
     log_Nn,alpha = pars
